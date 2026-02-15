@@ -209,6 +209,10 @@ article.wk{margin-left:1px;padding-left:6px}.sync-row{flex-direction:column}.sb{
 <h1>ENEM 2026</h1>
 <p>2h/dia — 35min Teoria + 85min Questões</p>
 <div class="goals"><span class="gl">🎯 800+ Mat</span><span class="gl">📝 900+ Red</span><span class="gl">🧪 700+ Nat</span></div>
+<div id="hojeDestaque" style="background:var(--bg2); border:2px solid var(--ac); border-radius:12px; padding:12px; margin:12px 0; text-align:center; font-weight:700;">
+    <span style="font-size:1.1rem;">Hoje: 15/02/2026 (Domingo)</span><br>
+    <span id="tarefaHoje" style="color:var(--ac2); font-size:1rem;"></span>
+</div>
 </header>
 
 <!-- ===== TIMER ===== -->
@@ -294,6 +298,9 @@ article.wk{margin-left:1px;padding-left:6px}.sync-row{flex-direction:column}.sb{
 <button type="button" class="nb" onclick="exportAsImage()">🖼️ Export Img</button>
 <button type="button" class="nb" onclick="showNotesList()">📋 Notas</button>
 <button type="button" class="nb" onclick="requestNotificationPermission()">🔔 Ativar Notifs</button>
+<button type="button" class="nb" onclick="showSpacedReview()">🔄 Revisão Espaçada</button>
+<button type="button" class="nb" onclick="showRedGallery()">🖼️ Redações</button>
+<button type="button" class="nb" onclick="copyDiaInteiro()">📋 Copiar Dia</button>
 <button type="button" class="nb" onclick="rAll()">🔄</button>
 </nav>
 
@@ -571,7 +578,18 @@ const D=[
 
 const T=D.map(d=>({id:d[0],sem:d[1],fase:d[2],dia:d[3],data:d[4],mat:d[5],tit:d[6],det:d[7]||'',tipo:d[8],pri:d[9],multi:!!d[10],rest:!!d[11]}));
 const F={1:{e:'🟢',n:'FASE 1: Base Lógica',s:'Fev–Mar',c:'var(--g)'},2:{e:'🟡',n:'FASE 2: Geometria e Mecânica',s:'Abr–Jun',c:'var(--y)'},3:{e:'🔵',n:'FASE 3: Diferencial',s:'Jul–Ago',c:'var(--ac)'},4:{e:'🔴',n:'FASE 4: Deploy',s:'Set–Out',c:'var(--r)'}};
-
+const matIcons = {
+    Mat: '📐',
+    Fís: '⚛️',
+    Quí: '🧪',
+    Bio: '🧬',
+    Hum: '🌍',
+    Ling: '📖',
+    Red: '✍️',
+    Rev: '🔍',
+    Sim: '📊',
+    OFF: '😴'
+};
 // ===== STATE =====
 let dn=J('cc_d',{}),nt=J('cc_n',{}),sk=J('cc_s',{c:0,d:[]}),oP=J('cc_p',{1:1,2:1,3:1,4:1}),oW=J('cc_w',{}),xp={},mI=null;
 function J(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}}
@@ -631,7 +649,10 @@ h+=`<section class="ph ${op?'':'cl'}" data-p="${fn}"><div class="ph-h" role="but
 Object.keys(g[fn]).sort((a,b)=>a-b).forEach(w=>{const wt=g[fn][w],wd=wt.filter(t=>dn[t.id]).length,wk=fn+'-'+w,wo=oW[wk]!==false,wc=wd===wt.length,d1=fmt(wt[0].data),d2=fmt(wt[wt.length-1].data);
 h+=`<article class="wk ${wo?'':'cl'}"><div class="wk-h" role="button" tabindex="0" onclick="tW('${wk}')" aria-expanded="${wo}"><div class="wk-d ${wc?'cpl':''}" style="background:${f.c}"></div><span class="wk-t">Semana ${w}</span><span class="wk-bg">${d1}→${d2}</span><span class="wk-bg ${wc?'wd':''}">${wd}/${wt.length}✓</span><span class="wk-ar">▼</span></div><div class="wk-b" style="max-height:${wo?'999999px':'0'};opacity:${wo?1:0}">`;
 wt.forEach(t=>{const d2=dn[t.id],ex=xp[t.id],hn=nt[t.id],isSm=t.mat.includes('Sim')||t.tipo==='Simulado';
-h+=`<article class="tk p-${t.pri} ${d2?'done':''} ${ex?'exp':''} ${t.multi?'multi':''} ${isSm?'sim':''} ${t.rest?'rest':''}" data-id="${t.id}" onclick="tE('${t.id}')"><button type="button" class="ck ${d2?'on':''}" onclick="event.stopPropagation();ck('${t.id}')" aria-label="Check"></button><div class="tk-c"><h4>${t.tit}</h4>${t.det?`<p>${t.det}</p>`:''}<div class="tk-tags">${t.mat.map(m=>`<span class="tg tg-${m}">${m}</span>`).join('')}<span class="tg" style="background:rgba(124,92,252,.05);color:var(--ac2)">${t.tipo}</span></div></div><div class="tk-m">
+h+=`<article class="tk p-${t.pri} ${d2?'done':''} ${ex?'exp':''} ${t.multi?'multi':''} ${isSm?'sim':''} ${t.rest?'rest':''}" data-id="${t.id}" onclick="tE('${t.id}')"><button type="button" class="ck ${d2?'on':''}" onclick="event.stopPropagation();ck('${t.id}')" aria-label="Check"></button><div class="tk-c"><h4>${t.tit}</h4>${t.det?`<p>${t.det}</p>`:''}<div class="tk-tags">
+    ${t.mat.map(m => `<span class="tg tg-${m}">${matIcons[m] || '📌'} ${m}</span>`).join('')}
+    <span class="tg" style="background:rgba(124,92,252,.05);color:var(--ac2)">${t.tipo}</span>
+</div></div><div class="tk-m">
     <span class="dy">${t.dia}</span>
     <time datetime="${t.data}">${fmt(t.data)}</time>
  <button type="button" class="nbtn${hn ? ' has' : ''}" onclick="event.stopPropagation(); oM('${t.id}')">📝</button>
@@ -668,9 +689,10 @@ function oM(id){
 
                 if (nt[id] && typeof nt[id] === 'object') {
             $('#redNota').value = nt[id].nota || '';
-            if (nt[id].img) {
-                $('#imgPreview').innerHTML = `<img src="${nt[id].img}" style="max-width:100%;">`;
-            }
+           if (nt[id] && nt[id].img) {
+    $('#imgPreview').innerHTML = `<img src="${nt[id].img}" style="max-width:100%; border-radius:8px;">`;
+    $('#redNota').value = nt[id].nota || '';
+}
         } else {
             $('#redNota').value = '';
             $('#imgPreview').innerHTML = '';
@@ -915,6 +937,118 @@ function loadCustomMusic() {
 
     // Atualiza o iframe
     frame.src = newSrc;
+}
+function showSpacedReview() {
+    const today = new Date();
+    const toReview = T.filter(t => {
+        if (!dn[t.id]) return false;
+        const doneDate = new Date(dn[t.id]);
+        const daysAgo = Math.floor((today - doneDate) / (86400000)); // 1000*60*60*24 = 86400000
+        return [7, 14, 30, 90].includes(daysAgo);
+    });
+
+    if (toReview.length === 0) {
+        toast("Nenhuma revisão espaçada pendente agora.");
+        return;
+    }
+
+    let html = '<h3>Revisão Espaçada Sugerida</h3><p>Priorize essas para fixar o conteúdo:</p><ul style="margin:12px 0; padding-left:20px;">';
+    toReview.forEach(t => {
+        const days = Math.floor((today - new Date(dn[t.id])) / 86400000);
+        html += `<li><strong>${t.tit}</strong> (${fmt(t.data)}) — feito há <b>${days} dias</b></li>`;
+    });
+    html += '</ul>';
+
+    const dlg = document.createElement('dialog');
+    dlg.innerHTML = `
+        <div style="position:relative; padding:20px;">
+            ${html}
+            <button type="button" style="position:absolute;top:10px;right:10px; background:transparent; border:none; font-size:1.4rem; cursor:pointer;" 
+                onclick="this.closest('dialog').close(); this.closest('dialog').remove();">✖</button>
+            <button type="button" class="bt bt-p" onclick="this.closest('dialog').close(); this.closest('dialog').remove();">Fechar</button>
+        </div>
+    `;
+    document.body.appendChild(dlg);
+    dlg.showModal();
+}
+function showRedGallery() {
+    const reds = Object.entries(nt).filter(([id, val]) => val.img && T.find(t=>t.id===id)?.mat.includes('Red'));
+    if (reds.length === 0) return toast("Nenhuma redação com foto salva.");
+    let html = '<h3>Galeria de Redações</h3><div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px;">';
+    reds.forEach(([id, val]) => {
+        const task = T.find(t=>t.id===id);
+        html += `
+            <div style="text-align:center;">
+                <img src="${val.img}" style="width:100%; border-radius:8px; cursor:pointer;" onclick="alert('Nota: ${val.nota || '?'} | ${task?.tit || id}')">
+                <small>${fmt(task?.data || 'Data perdida')} - ${val.nota || '?'}pts</small>
+            </div>`;
+    });
+    html += '</div>';
+    // Use temp dialog como antes
+    const dlg = document.createElement('dialog');
+    dlg.innerHTML = `<div style="padding:20px;">${html}<button onclick="this.closest('dialog').close();this.closest('dialog').remove();">Fechar</button></div>`;
+    document.body.appendChild(dlg);
+    dlg.showModal();
+}
+function highlightHoje() {
+    const hoje = new Date().toISOString().split('T')[0]; // '2026-02-15'
+    const tarefa = T.find(t => t.data === hoje);
+    
+    const el = document.getElementById('tarefaHoje');
+    if (tarefa) {
+        el.textContent = `${tarefa.dia}: ${tarefa.tit} (${tarefa.mat.join(' + ')})`;
+        el.style.color = tarefa.pri === 'alta' ? 'var(--r)' : 'var(--g)';
+    } else {
+        el.textContent = 'Dia livre ou sem tarefa marcada hoje!';
+        el.style.color = 'var(--t3)';
+    }
+    
+    // Opcional: destacar a tarefa no cronograma
+    document.querySelectorAll('.tk').forEach(tk => tk.style.opacity = '0.6');
+    const hojeEl = document.querySelector(`.tk time[datetime="${hoje}"]`);
+    if (hojeEl) {
+        hojeEl.closest('.tk').style.opacity = '1';
+        hojeEl.closest('.tk').style.border = '2px solid var(--ac)';
+        hojeEl.closest('.tk').scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+}
+
+highlightHoje(); // chama no início
+// E chame também no final de draw(): highlightHoje();
+function copyDiaInteiro() {
+    const hoje = new Date().toISOString().split('T')[0]; // ex: '2026-02-15'
+    
+    const tarefasHoje = T.filter(t => t.data === hoje);
+    
+    if (tarefasHoje.length === 0) {
+        toast("Nenhuma tarefa marcada para hoje.");
+        return;
+    }
+    
+    // Monta texto bonito para colar (WhatsApp, bloco de notas, etc.)
+    let texto = `Tarefas de hoje (${fmt(hoje)} - ${new Date().toLocaleDateString('pt-BR', {weekday: 'long'})}):\n\n`;
+    
+    tarefasHoje.forEach(t => {
+        const mats = t.mat.map(m => m).join(' + ');
+        texto += `• ${t.tit} (${mats})\n`;
+        if (t.det) texto += `  Detalhes: ${t.det}\n`;
+        texto += `\n`;
+    });
+    
+    // Copia para clipboard
+    navigator.clipboard.writeText(texto.trim())
+        .then(() => {
+            toast("Dia copiado! Cole onde quiser 📋");
+        })
+        .catch(err => {
+            console.error('Erro ao copiar:', err);
+            toast("Erro ao copiar. Tente manualmente.");
+        });
+}
+
+function fmt(dateStr) {
+    const [y, m, d] = dateStr.split('-');
+    return `${d}/${m}/${y}`;
 }
 draw();
 </script>
