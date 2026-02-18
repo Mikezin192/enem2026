@@ -196,6 +196,69 @@ article.tk{grid-template-columns:auto 1fr}.tk-m{grid-column:1/-1;flex-direction:
 .s-g{display:none}nav.bar{flex-direction:column}.search{min-width:100%}
 article.wk{margin-left:1px;padding-left:6px}.sync-row{flex-direction:column}.sb{width:100%}
 }
+@keyframes alertaPiscar { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+.atraso-alto { animation: alertaPiscar 2s infinite; }
+.fase-dot {
+    width: 60px; height: 60px; border-radius: 50%; 
+    display: flex; align-items: center; justify-content: center; 
+    font-size: 1.4rem; font-weight: bold; cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.fase-dot:hover { transform: scale(1.15); box-shadow: 0 6px 15px rgba(0,0,0,0.5); }
+.fase-dot.atual { border: 3px solid var(--ac2); box-shadow: 0 0 15px var(--ac); }
+.fase-dot.concluida { opacity: 0.7; filter: brightness(1.2); }
+.cal-dia {
+    padding:8px; border-radius:6px; min-height:60px; display:flex; flex-direction:column; justify-content:center;
+    border:1px solid var(--bd); cursor:pointer; transition:0.2s;
+}
+#calendarioSection {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.cal-dia {
+    padding: 10px;
+    border-radius: 8px;
+    min-height: 70px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid var(--bd);
+    cursor: pointer;
+    transition: 0.2s;
+    background: var(--bg3);
+}
+.cal-dia:hover {
+    background: var(--bg4);
+    transform: scale(1.05);
+}
+.cal-hoje {
+    border: 3px solid var(--ac);
+    background: rgba(124,92,252,0.15);
+    font-weight: bold;
+}
+.cal-feito {
+    background: rgba(34,197,94,0.25);
+    border-color: var(--g);
+}
+.cal-pendente {
+    background: rgba(234,179,8,0.25);
+    border-color: var(--y);
+}
+.cal-atrasado {
+    background: rgba(239,68,68,0.25);
+    border-color: var(--r);
+    an
+imation: alertaPiscar 3s infinite;
+}
+.cal-pulado {
+    background: rgba(249,115,22,0.25) !important;  /* laranja suave */
+    border-color: var(--o);
+    opacity: 0.9;
+}
+.cal-pulado:hover {
+    background: rgba(249,115,22,0.4) !important;
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -212,9 +275,19 @@ article.wk{margin-left:1px;padding-left:6px}.sync-row{flex-direction:column}.sb{
 <div id="hojeDestaque" style="background:var(--bg2); border:2px solid var(--ac); border-radius:12px; padding:12px; margin:12px 0; text-align:center; font-weight:700;">
     <span style="font-size:1.1rem;" id="dataHojeTexto">Carregando data...</span><br>
     <span id="tarefaHoje" style="color:var(--ac2); font-size:1rem;"></span>
+<button type="button" onclick="pularDia()" style="margin-top:10px; padding:8px 16px; background:var(--y); color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:0.9rem;">
+    ⏭ Pular este dia
+</button>
 </div>
 </header>
 
+<div id="atrasoAlerta" style="display:none; background:rgba(239,68,68,0.15); border:2px solid var(--r); border-radius:12px; padding:12px; margin:12px 0; text-align:center; color:var(--r); font-weight:700;">
+    <span>⚠️ Você está atrasado <strong id="diasAtraso">0</strong> dias!</span><br>
+    <small style="color:var(--t3);">Priorize tarefas pendentes de alta prioridade.</small>
+</div>
+<div id="mapaFases" style="display:flex; justify-content:center; gap:12px; margin:16px 0; flex-wrap:wrap; padding:0 10px;">
+    <!-- Será preenchido automaticamente pelo JS -->
+</div>
 <!-- ===== TIMER ===== -->
 <section class="timer" aria-label="Temporizador">
 <div class="t-lbl" data-t="lbl">📖 TEORIA</div>
@@ -277,10 +350,10 @@ article.wk{margin-left:1px;padding-left:6px}.sync-row{flex-direction:column}.sb{
 <section class="sync" aria-label="Sincronizar">
 <h3>🔄 Sincronizar</h3>
 <div class="sync-row">
-<button type="button" class="sb" onclick="expP()">📤 Exportar</button>
-<button type="button" class="sb" onclick="showI()">📥 Importar</button>
-<button type="button" class="sb" onclick="cpC()">📋 Copiar</button>
-<button type="button" class="sb" onclick="shP()">📱 Share</button>
+<button type="button" class="sb" onclick="expP()" style="background:#22c55e; color:#fff; border-color:#16a34a;">📤 Exportar</button>
+        <button type="button" class="sb" onclick="showI()" style="background:#3b82f6; color:#fff; border-color:#2563eb;">📥 Importar</button>
+        <button type="button" class="sb" onclick="cpC()" style="background:#eab308; color:#000; border-color:#ca8a04;">📋 Copiar</button>
+        <button type="button" class="sb" onclick="shP()" style="background:#ec4899; color:#fff; border-color:#db2777;">📱 Share</button>
 </div>
 <textarea class="sc" id="sc" placeholder="Cole o código..."></textarea>
 <div class="imp" data-sy="ib">
@@ -295,26 +368,54 @@ article.wk{margin-left:1px;padding-left:6px}.sync-row{flex-direction:column}.sb{
 <label for="si" class="sr-only">Buscar</label>
 <input class="search" id="si" placeholder="🔍 Buscar..." oninput="draw()">
 <select class="sel" id="ff" onchange="draw()" aria-label="Fase"><option value="">Fases</option><option value="1">🟢F1</option><option value="2">🟡F2</option><option value="3">🔵F3</option><option value="4">🔴F4</option></select>
-<select class="sel" id="fm" onchange="draw()" aria-label="Matéria"><option value="">Mat.</option><option value="Mat">Mat</option><option value="Fís">Fís</option><option value="Quí">Quí</option><option value="Bio">Bio</option><option value="Hum">Hum</option><option value="Ling">Ling</option><option value="Red">Red</option></select>
-<select class="sel" id="fs" onchange="draw()" aria-label="Status"><option value="">Status</option><option value="p">Pendentes</option><option value="d">Feitas</option></select>
-<button type="button" class="nb" onclick="eAll()">📂</button>
-<button type="button" class="nb" onclick="cAll()">📁</button>
-<button type="button" class="nb" onclick="eCSV()">CSV</button>
-<button type="button" class="nb" onclick="toggleMusic()">🎧 Lo-fi</button>
-<button type="button" class="nb" onclick="exportAsImage()">🖼️ Export Img</button>
-<button type="button" class="nb" onclick="showNotesList()">📋 Notas</button>
-<button type="button" class="nb" onclick="requestNotificationPermission()">🔔 Ativar Notifs</button>
-<button type="button" class="nb" onclick="showSpacedReview()">🔄 Revisão Espaçada</button>
-<button type="button" class="nb" onclick="showRedGallery()">🖼️ Redações</button>
-<button type="button" class="nb" onclick="copyDiaInteiro()">📋 Copiar Dia</button>
-<button type="button" class="nb" onclick="rAll()">🔄</button>
+<select class="sel" id="fm" onchange="draw()" aria-label="Matéria">
+        <option value="">Mat.</option>
+        <option value="Mat">Mat</option>
+        <option value="Fís">Fís</option>
+        <option value="Quí">Quí</option>
+        <option value="Bio">Bio</option>
+        <option value="Hum">Hum</option>
+        <option value="Ling">Ling</option>
+        <option value="Red">Red</option>
+    </select><select class="sel" id="fs" onchange="draw()" aria-label="Status"><option value="">Status</option><option value="p">Pendentes</option><option value="d">Feitas</option></select>
+<button type="button" class="nb" onclick="eAll()" style="background:#4ade80; color:#000; border-color:#22c55e;">📂 Expandir tudo</button>
+    <button type="button" class="nb" onclick="cAll()" style="background:#f87171; color:#fff; border-color:#ef4444;">📁 Colapsar tudo</button>
+    <button type="button" class="nb" onclick="eCSV()" style="background:#fbbf24; color:#000; border-color:#eab308;">📊 Exportar CSV</button>
+    <button type="button" class="nb" onclick="toggleMusic()" style="background:#a78bfa; color:#000; border-color:#7c5cfc;">🎧 Lo-fi</button>
+    <button type="button" class="nb" onclick="exportAsImage()" style="background:#60a5fa; color:#000; border-color:#3b82f6;">🖼️ Exportar Imagem</button>
+    <button type="button" class="nb" onclick="showNotesList()" style="background:#f472b6; color:#000; border-color:#ec4899;">📋 Notas</button>
+    <button type="button" class="nb" onclick="requestNotificationPermission()" style="background:#34d399; color:#000; border-color:#10b981;">🔔 Notificações</button>
+    <button type="button" class="nb" onclick="showSpacedReview()" style="background:#f97316; color:#fff; border-color:#ea580c;">🔄 Revisão Espaçada</button>
+    <button type="button" class="nb" onclick="showRedGallery()" style="background:#c084fc; color:#000; border-color:#a855f7;">🖼️ Redações</button>
+    <button type="button" class="nb" onclick="copyDiaInteiro()" style="background:#38bdf8; color:#000; border-color:#0ea5e9;">📋 Copiar Dia</button>
+    <button type="button" class="nb" id="btnCalendario" style="background:#facc15; color:#000; border-color:#eab308;">🗓 Calendário</button>
+    <button type="button" class="nb" onclick="rAll()" style="background:#ef4444; color:#fff; border-color:#dc2626;">🔄 Reset Total</button>
+</nav>
+<button type="button" class="nb" onclick="rAll()" style="background:var(--r); color:#fff;">🔄 Reset Total</button>
 </nav>
 
 <!-- ===== MAIN ===== -->
 <main id="ct" aria-label="Cronograma"></main>
-</div>
 
-<!-- ===== DIALOG ===== -->
+<dialog id="calendarioDialog" style="width:90%; max-width:650px; padding:20px; border-radius:12px; background:var(--bg2); border:2px solid var(--ac);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <button onclick="mudarMes(-1)" class="bt bt-g" style="padding:8px 16px;">◀ Anterior</button>
+        <h3 id="tituloMes" style="margin:0; color:var(--ac2);">Calendário Fevereiro 2026</h3>
+        <button onclick="mudarMes(1)" class="bt bt-g" style="padding:8px 16px;">Próximo ▶</button>
+    </div>
+    <div id="calendarioGrid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:8px; text-align:center; font-size:0.9rem;">
+        <div style="font-weight:bold; color:var(--r);">Dom</div>
+        <div style="font-weight:bold; color:var(--ac);">Seg</div>
+        <div style="font-weight:bold; color:var(--ac);">Ter</div>
+        <div style="font-weight:bold; color:var(--ac);">Qua</div>
+        <div style="font-weight:bold; color:var(--ac);">Qui</div>
+        <div style="font-weight:bold; color:var(--ac);">Sex</div>
+        <div style="font-weight:bold; color:var(--r);">Sáb</div>
+    </div>
+    <button onclick="document.getElementById('calendarioDialog').close()" style="margin:20px auto; display:block; padding:10px 24px;" class="bt bt-p">Fechar</button>
+</dialog>
+
+ <!-- ===== DIALOG ===== -->
 <dialog id="dlg">
     <h3>📝 Anotações</h3>
     <div class="msub" data-dl="t"></div>
@@ -598,9 +699,17 @@ const matIcons = {
 };
 // ===== STATE =====
 let dn=J('cc_d',{}),nt=J('cc_n',{}),sk=J('cc_s',{c:0,d:[]}),oP=J('cc_p',{1:1,2:1,3:1,4:1}),oW=J('cc_w',{}),xp={},mI=null;
+let pulados = J('cc_pulados', {});  // objeto que guarda datas puladas, ex: {"2026-02-17": true}
 function J(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch{return d}}
-function S(){['cc_d','cc_n','cc_s','cc_p','cc_w'].forEach((k,i)=>localStorage.setItem(k,JSON.stringify([dn,nt,sk,oP,oW][i])))}
-const $=s=>document.querySelector(s);
+function S(){
+    localStorage.setItem('cc_d', JSON.stringify(dn));
+    localStorage.setItem('cc_n', JSON.stringify(nt));
+    localStorage.setItem('cc_s', JSON.stringify(sk));
+    localStorage.setItem('cc_p', JSON.stringify(oP));
+    localStorage.setItem('cc_w', JSON.stringify(oW));
+    localStorage.setItem('cc_pulados', JSON.stringify(pulados));  // ← nova linha
+
+}const $=s=>document.querySelector(s);
 
 // ===== AUDIO BEEP =====
 let audioCtx;
@@ -664,7 +773,9 @@ h+=`<article class="tk p-${t.pri} ${d2?'done':''} ${ex?'exp':''} ${t.multi?'mult
  <button type="button" class="nbtn${hn ? ' has' : ''}" onclick="event.stopPropagation(); oM('${t.id}')">📝</button>
 </div></article>`});
 h+=`</div></article>`});h+=`</div></section>`});
-c.innerHTML=h||'<div class="empty">🔍 Nada encontrado</div>';upD()  
+c.innerHTML=h||'<div class="empty">🔍 Nada encontrado</div>';upD()
+renderMapaFases();
+checkAtraso();
 }
 
 function ck(id){const b=document.querySelector(`[data-id="${id}"] .ck`);if(dn[id]){delete dn[id];toast('⬜ Desmarcada')}else{dn[id]=Date.now();if(b)b.classList.add('on');beep(660,.1);toast('✅ Concluída!');const td=new Date().toISOString().split('T')[0];if(!sk.d.includes(td))sk.d.push(td);const n=Object.keys(dn).length;if(n%10===0){toast(`🔥 ${n} tarefas!`);confetti()}if(n===T.length){toast('🏆 100%!!');confetti();confetti()}}S();draw()}
@@ -683,6 +794,30 @@ $('[data-pr="pct"]').textContent=pct+'%';$('[data-pr="bar"]').style.width=pct+'%
 [1,2,3,4].forEach(f=>{const ft=T.filter(t=>t.fase===f),fd=ft.filter(t=>dn[t.id]).length,fp=ft.length?Math.round(fd/ft.length*100):0;$(`[data-pr="f${f}"]`).style.width=fp+'%';$(`[data-pr="p${f}"]`).textContent=fp+'%'});
 const dates=sk.d.sort();let sc=0;const now=new Date();for(let i=0;i<60;i++){const d=new Date(now);d.setDate(now.getDate()-i);if(dates.includes(d.toISOString().split('T')[0]))sc++;else if(i>0)break}
 sk.c=sc;$('[data-s="n"]').textContent=sc;let dots='';for(let i=20;i>=0;i--){const d=new Date(now);d.setDate(now.getDate()-i);const ds=d.toISOString().split('T')[0];dots+=`<div class="s-c ${dates.includes(ds)?'on':''} ${i===0?'now':''}"></div>`}$('[data-s="g"]').innerHTML=dots;rT()}
+
+function checkAtraso() {
+    const hoje = new Date().toISOString().split('T')[0];
+    const pendentesAtrasadas = T.filter(t => !dn[t.id] && t.data < hoje && t.pri === 'alta');
+    
+    if (pendentesAtrasadas.length > 0) {
+        const maisAntiga = pendentesAtrasadas.reduce((prev, curr) => 
+            new Date(curr.data) < new Date(prev.data) ? curr : prev
+        );
+        const dias = Math.floor((new Date(hoje) - new Date(maisAntiga.data)) / (1000*60*60*24));
+        
+        document.getElementById('diasAtraso').textContent = dias;
+        document.getElementById('atrasoAlerta').style.display = 'block';
+
+        // Dica extra: piscar se atraso > 3 dias
+        if (dias > 3) {
+            document.getElementById('atrasoAlerta').classList.add('atraso-alto');
+        } else {
+            document.getElementById('atrasoAlerta').classList.remove('atraso-alto');
+        }
+    } else {
+        document.getElementById('atrasoAlerta').style.display = 'none';
+    }
+}
 
 function oM(id){
     mI = id;
@@ -764,7 +899,34 @@ function sN(){
     draw();
 }
 function eCSV(){let c='\uFEFF"Sem","Fase","Dia","Data","Mat","Título","Det","Tipo","Pri","Feito"\n';T.forEach(t=>{c+=`${t.sem},"${F[t.fase].n}","${t.dia}","${t.data}","${t.mat.join(',')}","${t.tit}","${t.det.replace(/"/g,'""')}","${t.tipo}","${t.pri}","${dn[t.id]?'TRUE':'FALSE'}"\n`});const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv;charset=utf-8;'}));a.download='enem2026_cc.csv';a.click();toast('📥 CSV!')}
-function rAll(){if(!confirm('⚠️ Apagar TUDO?'))return;dn={};nt={};sk={c:0,d:[]};localStorage.clear();S();draw();toast('🔄 Reset!')}
+function rAll(){
+    if(!confirm('⚠️ Tem certeza que quer APAGAR TUDO?\n\nIsso vai resetar:\n- Tarefas feitas\n- Anotações\n- Streak\n- Progresso\n- Dias pulados\n- Tudo no localStorage')) return;
+
+    // Limpa todas as variáveis
+    dn = {};
+    nt = {};
+    sk = {c:0, d:[]};
+    oP = {1:1,2:1,3:1,4:1};
+    oW = {};
+    pulados = {};  // ← limpa os dias pulados
+    xp = {};       // expandidos, se usar
+
+    // Limpa TODO o localStorage (mais seguro e completo)
+    localStorage.clear();
+
+    // Salva o estado zerado (opcional, mas garante consistência)
+    S();
+
+    // Recarrega a página para reset visual total
+    draw();
+    upD();
+    highlightHoje();
+    renderMapaFases();
+    checkAtraso();
+
+    toast('🔄 Tudo resetado! Começando do zero.');
+    confetti(); // efeito legal no reset
+}
 function fmt(d){const[y,m,dd]=d.split('-');return dd+'/'+m}
 function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.getElementById('toasts').appendChild(t);setTimeout(()=>t.remove(),3000)}
 function confetti(){const cv=document.getElementById('confetti'),ctx=cv.getContext('2d');cv.width=innerWidth;cv.height=innerHeight;const ps=[],cl=['#22c55e','#eab308','#7c5cfc','#ef4444','#f97316','#06b6d4','#ec4899'];for(let i=0;i<80;i++)ps.push({x:Math.random()*cv.width,y:-10-Math.random()*200,vx:(Math.random()-.5)*7,vy:Math.random()*3+2,c:cl[~~(Math.random()*cl.length)],s:Math.random()*4+2,r:Math.random()*360,rs:(Math.random()-.5)*10,l:1});(function go(){ctx.clearRect(0,0,cv.width,cv.height);let a=false;ps.forEach(p=>{if(p.l<=0)return;a=true;p.x+=p.vx;p.vy+=.1;p.y+=p.vy;p.r+=p.rs;p.l-=.007;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r*Math.PI/180);ctx.globalAlpha=p.l;ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);ctx.restore()});if(a)requestAnimationFrame(go);else ctx.clearRect(0,0,cv.width,cv.height)})()}
@@ -1037,12 +1199,256 @@ function highlightHoje() {
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
+function renderMapaFases() {
+    const container = document.getElementById('mapaFases');
+    if (!container) return;
+    
+    let html = '';
+    [1,2,3,4].forEach(f => {
+        const fase = F[f];
+        const tarefasFase = T.filter(t => t.fase == f);
+        const feitas = tarefasFase.filter(t => dn[t.id]).length;
+        const total = tarefasFase.length;
+        const pct = total ? Math.round(feitas / total * 100) : 0;
+        
+        const isAtual = tarefasFase.some(t => t.data <= new Date().toISOString().split('T')[0] && 
+            !tarefasFase.some(tt => tt.data > t.data && !dn[tt.id]));
+        const isConcluida = pct === 100;
+        
+        html += `
+            <div class="fase-dot ${isAtual ? 'atual' : ''} ${isConcluida ? 'concluida' : ''}" 
+                 style="background:${fase.c}; color:#000;" 
+                 onclick="scrollToFase(${f})"
+                 title="$$ {fase.n} – \[  {pct}% (  \]{feitas}/ $${total})">
+                ${fase.e}
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+function scrollToFase(faseNum) {
+    const el = document.querySelector(`section.ph[data-p="${faseNum}"]`);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (el.classList.contains('cl')) tP(faseNum); // expande se estiver fechada
+    }
+}
 function fmt(dateStr) {
     const [y, m, d] = dateStr.split('-');
     return `${d}/${m}/${y}`;
 }
+let mesAtual = 1;   // Começa em fevereiro 2026 (mês 1 = fevereiro no JS)
+let anoAtual = 2026;
+
+function toggleCalendario() {
+    console.log("Botão Calendário clicado!"); // ← para debug
+
+    const dialog = document.getElementById('calendarioDialog');
+    if (!dialog) {
+        console.error("ERRO: Dialog #calendarioDialog não encontrado");
+        return;
+    }
+
+    if (dialog.open) {
+        dialog.close();
+        console.log("Modal fechado");
+    } else {
+        dialog.showModal();
+        renderCalendario();
+        console.log("Modal aberto + renderizado");
+    }
+}
+
+function mudarMes(delta) {
+    mesAtual += delta;
+
+    // Limita: fevereiro (1) a outubro (9) de 2026
+    if (anoAtual === 2026) {
+        if (mesAtual < 1) mesAtual = 1;
+        if (mesAtual > 9) mesAtual = 9;
+    }
+
+    const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+                   "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    document.getElementById('tituloMes').textContent = `Calendário ${meses[mesAtual]} ${anoAtual}`;
+
+    renderCalendario();
+}
+
+function renderCalendario() {
+    const grid = document.getElementById('calendarioGrid');
+    if (!grid) return;
+
+    while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+
+    const primeiroDia = new Date(anoAtual, mesAtual, 1);
+    const ultimoDia = new Date(anoAtual, mesAtual + 1, 0);
+    const diaSemanaInicio = primeiroDia.getDay();
+
+    for (let i = 0; i < diaSemanaInicio; i++) {
+        const vazio = document.createElement('div');
+        vazio.className = 'cal-dia';
+        vazio.style.visibility = 'hidden';
+        grid.appendChild(vazio);
+    }
+
+    const hoje = new Date();
+    for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
+        const dataStr = `${anoAtual}-${String(mesAtual + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+        const div = document.createElement('div');
+        div.className = 'cal-dia';
+
+        const tarefasDia = T.filter(t => t.data === dataStr);
+        let conteudo = `<strong>${dia}</strong>`;
+
+        if (pulados[dataStr]) {
+            // Dia pulado → destaque especial
+            div.classList.add('cal-pulado');  // vamos criar estilo abaixo
+            conteudo += `<br><small style="color:var(--y); font-weight:bold;">Pulado</small>`;
+            if (tarefasDia.length > 0) {
+                conteudo += `<br><small>(tarefas marcadas como feitas)</small>`;
+            }
+        } else if (tarefasDia.length > 0) {
+            const feitas = tarefasDia.filter(t => dn[t.id]).length;
+            const status = feitas === tarefasDia.length ? '✓ Feito' : `${feitas}/${tarefasDia.length}`;
+
+            const titulos = tarefasDia.slice(0, 2).map(t => {
+                let txt = t.tit.length > 20 ? t.tit.substring(0,17)+'...' : t.tit;
+                return dn[t.id] ? `✓ ${txt}` : `⬜ ${txt}`;
+            }).join('<br>');
+
+            if (tarefasDia.length > 2) titulos += '<br>+ mais';
+
+            conteudo += `<br><small style="line-height:1.15;">${titulos}<br><strong>${status}</strong></small>`;
+        } else {
+            conteudo += '<br><small>Livre</small>';
+        }
+
+        div.innerHTML = conteudo;
+
+        // Classes de estilo
+        if (dataStr === hoje.toISOString().split('T')[0]) div.classList.add('cal-hoje');
+        if (tarefasDia.length > 0 && !pulados[dataStr]) {
+            const feitas = tarefasDia.filter(t => dn[t.id]).length;
+            if (feitas === tarefasDia.length) div.classList.add('cal-feito');
+            else if (feitas > 0) div.classList.add('cal-pendente');
+            else if (new Date(dataStr) < hoje) div.classList.add('cal-atrasado');
+        }
+
+        div.onclick = () => {
+            const el = document.querySelector(`.tk time[datetime="${dataStr}"]`);
+            if (el) {
+                el.closest('.tk').scrollIntoView({behavior:'smooth', block:'center'});
+                document.getElementById('calendarioDialog').close();
+            }
+        };
+
+        grid.appendChild(div);
+    }
+}function getStatusDia(dataStr) {
+    const tarefas = T.filter(t => t.data === dataStr);
+    if (tarefas.length === 0) return 'Livre';
+    const feitas = tarefas.filter(t => dn[t.id]).length;
+    return feitas === tarefas.length ? '✓ Feito' : `${feitas}/${tarefas.length}`;
+}
+
+function copyDiaInteiro() {
+    const hoje = new Date().toISOString().split('T')[0];
+    const tarefasHoje = T.filter(t => t.data === hoje);
+
+    if (tarefasHoje.length === 0) {
+        toast("Nenhuma tarefa hoje para copiar.");
+        return;
+    }
+
+    let texto = `Tarefas do dia ${fmt(hoje)} (${new Date().toLocaleDateString('pt-BR', {weekday: 'long'})}):\n\n`;
+    tarefasHoje.forEach(t => {
+        const feito = dn[t.id] ? '✓' : '⬜';
+        texto += `${feito} ${t.dia} - ${t.tit} (${t.mat.join(' + ')}) - ${t.tipo}\n`;
+    });
+
+    navigator.clipboard.writeText(texto).then(() => {
+        toast("Dia copiado para a área de transferência! 📋");
+    }).catch(err => {
+        toast("Erro ao copiar. Copie manualmente.");
+        console.error(err);
+    });
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('btnCalendario');
+    if (btn) {
+        btn.addEventListener('click', toggleCalendario);
+        console.log("Listener do botão Calendário adicionado com sucesso");
+    } else {
+        console.error("Botão #btnCalendario não encontrado no DOM");
+    }
+});
+function pularDia() {
+    console.log("pularDia() chamada"); // ← debug
+    const hojeStr = new Date().toISOString().split('T')[0];
+    console.log("Hoje:", hojeStr); // debug
+
+    if (pulados[hojeStr]) {
+        toast("Este dia já foi pulado.");
+        console.log("Dia já pulado");
+        return;
+    }
+
+    if (!confirm("Deseja pular o dia inteiro?\n\nTodas as tarefas de hoje serão marcadas como feitas e o dia aparecerá como 'PULADO' no calendário.")) {
+        console.log("Cancelado pelo usuário");
+        return;
+    }
+
+    const tarefasHoje = T.filter(t => t.data === hojeStr);
+    console.log("Tarefas hoje:", tarefasHoje.length); // debug
+
+    tarefasHoje.forEach(t => {
+        if (!dn[t.id]) {
+            dn[t.id] = Date.now();
+            console.log("Marcada:", t.id);
+        }
+    });
+
+    pulados[hojeStr] = true;
+    console.log("Marcado como pulado:", hojeStr);
+
+    S();
+    draw();
+    upD();
+
+    confetti();
+    beep(660, 0.15);
+    setTimeout(() => beep(880, 0.15), 120);
+
+    toast(`Dia ${fmt(hojeStr)} pulado! ✓`);
+
+    const dlg = document.getElementById('calendarioDialog');
+    if (dlg && dlg.open) dlg.close();
+}
+document.addEventListener('DOMContentLoaded', () => {
+    // Listener do calendário (já tem)
+    const btnCalendario = document.getElementById('btnCalendario');
+    if (btnCalendario) {
+        btnCalendario.addEventListener('click', toggleCalendario);
+    }
+
+    // Listener extra para o botão Pular Dia (por segurança)
+    const btnPular = document.querySelector('#hojeDestaque button[onclick="pularDia()"]');
+    if (btnPular) {
+        btnPular.addEventListener('click', () => {
+            console.log("Botão Pular Dia clicado via listener");
+            pularDia();
+        });
+    } else {
+        console.warn("Botão Pular Dia não encontrado no DOM");
+    }
+});
 window.addEventListener('load', () => {
     draw();
+    renderMapaFases();
+    checkAtraso();
     highlightHoje();
 });
 </script>
