@@ -259,6 +259,21 @@ imation: alertaPiscar 3s infinite;
 .cal-pulado:hover {
     background: rgba(249,115,22,0.4) !important;
 }
+.sub-tarefas {
+    background: rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 8px;
+    margin: 8px 0;
+}
+.sub-tk {
+    border: 1px dashed var(--ac);
+    background: var(--bg3);
+    padding: 6px 10px;
+    margin: 4px 0;
+}
+.sub-tk .ck {
+    margin-right: 12px;
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -391,8 +406,7 @@ imation: alertaPiscar 3s infinite;
     <button type="button" class="nb" id="btnCalendario" style="background:#facc15; color:#000; border-color:#eab308;">🗓 Calendário</button>
     <button type="button" class="nb" onclick="rAll()" style="background:#ef4444; color:#fff; border-color:#dc2626;">🔄 Reset Total</button>
 </nav>
-<button type="button" class="nb" onclick="rAll()" style="background:var(--r); color:#fff;">🔄 Reset Total</button>
-</nav>
+
 
 <!-- ===== MAIN ===== -->
 <main id="ct" aria-label="Cronograma"></main>
@@ -763,22 +777,116 @@ let h='';
 h+=`<section class="ph ${op?'':'cl'}" data-p="${fn}"><div class="ph-h" role="button" tabindex="0" onclick="tP(${fn})" aria-expanded="${op}"><div class="ph-e">${f.e}</div><div class="ph-i"><div class="ph-t">${f.n}</div><div class="ph-s">${f.s}</div></div><span class="ph-c" style="color:${f.c}">${dc}/${ids.length}·${pct}%</span><span class="ph-a">▼</span></div><div class="ph-b" style="max-height:${op?'999999px':'0'};opacity:${op?1:0}">`;
 Object.keys(g[fn]).sort((a,b)=>a-b).forEach(w=>{const wt=g[fn][w],wd=wt.filter(t=>dn[t.id]).length,wk=fn+'-'+w,wo=oW[wk]!==false,wc=wd===wt.length,d1=fmt(wt[0].data),d2=fmt(wt[wt.length-1].data);
 h+=`<article class="wk ${wo?'':'cl'}"><div class="wk-h" role="button" tabindex="0" onclick="tW('${wk}')" aria-expanded="${wo}"><div class="wk-d ${wc?'cpl':''}" style="background:${f.c}"></div><span class="wk-t">Semana ${w}</span><span class="wk-bg">${d1}→${d2}</span><span class="wk-bg ${wc?'wd':''}">${wd}/${wt.length}✓</span><span class="wk-ar">▼</span></div><div class="wk-b" style="max-height:${wo?'999999px':'0'};opacity:${wo?1:0}">`;
-wt.forEach(t=>{const d2=dn[t.id],ex=xp[t.id],hn=nt[t.id],isSm=t.mat.includes('Sim')||t.tipo==='Simulado';
-h+=`<article class="tk p-${t.pri} ${d2?'done':''} ${ex?'exp':''} ${t.multi?'multi':''} ${isSm?'sim':''} ${t.rest?'rest':''}" data-id="${t.id}" onclick="tE('${t.id}')"><button type="button" class="ck ${d2?'on':''}" onclick="event.stopPropagation();ck('${t.id}')" aria-label="Check"></button><div class="tk-c"><h4>${t.tit}</h4>${t.det?`<p>${t.det}</p>`:''}<div class="tk-tags">
-    ${t.mat.map(m => `<span class="tg tg-${m}">${matIcons[m] || '📌'} ${m}</span>`).join('')}
-    <span class="tg" style="background:rgba(124,92,252,.05);color:var(--ac2)">${t.tipo}</span>
-</div></div><div class="tk-m">
-    <span class="dy">${t.dia}</span>
-    <time datetime="${t.data}">${fmt(t.data)}</time>
- <button type="button" class="nbtn${hn ? ' has' : ''}" onclick="event.stopPropagation(); oM('${t.id}')">📝</button>
-</div></article>`});
+wt.forEach(t => {
+    const d2 = dn[t.id];
+    const ex = xp[t.id]; // expandido ou não
+    const hn = nt[t.id];
+    const isSm = t.mat.includes('Sim') || t.tipo === 'Simulado';
+
+    // Classe 'exp' controla se está expandido
+    const expandedClass = ex ? 'exp' : '';
+
+    h += `<article class="tk p-${t.pri} ${d2 ? 'done' : ''} ${expandedClass} ${t.multi ? 'multi' : ''} ${isSm ? 'sim' : ''} ${t.rest ? 'rest' : ''}" data-id="${t.id}" onclick="tE('${t.id}')">
+        
+        <div class="tk-c">
+            <h4>${t.tit}</h4>
+            ${t.det ? `<p>${t.det}</p>` : ''}
+            <div class="tk-tags">
+                ${t.mat.map(m => `<span class="tg tg-${m}">${matIcons[m] || '📌'} ${m}</span>`).join('')}
+                <span class="tg" style="background:rgba(124,92,252,.05);color:var(--ac2)">${t.tipo}</span>
+            </div>
+        </div>
+        <div class="tk-m">
+            <span class="dy">${t.dia}</span>
+            <time datetime="${t.data}">${fmt(t.data)}</time>
+            <button type="button" class="nbtn${hn ? ' has' : ''}" onclick="event.stopPropagation(); oM('${t.id}')">📝</button>
+        </div>
+    </article>`;
+
+    // Se expandido e tem múltiplas matérias, adiciona as sub-tarefas ABAIXO
+    if (ex && t.mat.length > 1) {
+        h += `<div class="sub-tarefas" style="padding-left:40px; margin-top:8px; border-left:2px solid var(--ac); padding-bottom:8px;">`;
+        t.mat.forEach((mat, idx) => {
+            let tituloMat = t.tit;
+            if (t.tit.includes(' + ')) {
+                const partes = t.tit.split(' + ');
+                if (partes[idx]) tituloMat = partes[idx].trim();
+            }
+
+            const subId = `${t.id}-${mat}`;
+            const subFeito = dn[subId] || d2;
+
+            h += `<article class="tk sub-tk p-baixa ${subFeito ? 'done' : ''}" style="margin:4px 0; background:rgba(124,92,252,0.08);">
+                <button type="button" class="ck ${subFeito ? 'on' : ''}" onclick="event.stopPropagation(); ckSub('${subId}', '${t.id}')"></button>
+                <div class="tk-c" style="font-size:0.9rem;">
+                    <h4 style="color:var(--ac2);">${mat}: ${tituloMat}</h4>
+                </div>
+            </article>`;
+        });
+        h += `</div>`;
+    }
+});
 h+=`</div></article>`});h+=`</div></section>`});
 c.innerHTML=h||'<div class="empty">🔍 Nada encontrado</div>';upD()
 renderMapaFases();
 checkAtraso();
 }
 
-function ck(id){const b=document.querySelector(`[data-id="${id}"] .ck`);if(dn[id]){delete dn[id];toast('⬜ Desmarcada')}else{dn[id]=Date.now();if(b)b.classList.add('on');beep(660,.1);toast('✅ Concluída!');const td=new Date().toISOString().split('T')[0];if(!sk.d.includes(td))sk.d.push(td);const n=Object.keys(dn).length;if(n%10===0){toast(`🔥 ${n} tarefas!`);confetti()}if(n===T.length){toast('🏆 100%!!');confetti();confetti()}}S();draw()}
+function ck(id) {
+    const b = document.querySelector(`[data-id="${id}"] .ck`);
+    if (dn[id]) {
+        delete dn[id];
+        if (b) b.classList.remove('on');
+        toast('⬜ Desmarcada');
+    } else {
+        dn[id] = Date.now();
+        if (b) b.classList.add('on');
+        beep(660, .1);
+        toast('✅ Concluída!');
+        const td = new Date().toISOString().split('T')[0];
+        if (!sk.d.includes(td)) {
+            sk.d.push(td);
+        }
+        const n = Object.keys(dn).length;
+        if (n % 10 === 0) {
+            toast(`🔥 ${n} tarefas!`);
+            confetti();
+        }
+        if (n === T.length) {
+            toast('🏆 100%!!');
+            confetti();
+            confetti();
+        }
+    }
+    S();
+    draw();
+}
+function ckSub(subId, parentId) {
+    event.stopPropagation();
+
+    if (dn[subId]) {
+        delete dn[subId];
+        toast('⬜ Sub-tarefa desmarcada');
+    } else {
+        dn[subId] = Date.now();
+        toast('✅ Sub-tarefa concluída!');
+        beep(660, .1);
+    }
+
+    // Atualiza status da tarefa pai (se todas sub estiverem feitas)
+    const parentTask = T.find(t => t.id === parentId);
+    if (parentTask && parentTask.mat.length > 1) {
+        const todasFeitas = parentTask.mat.every(mat => dn[`${parentId}-${mat}`]);
+        if (todasFeitas) {
+            dn[parentId] = Date.now();
+        } else {
+            delete dn[parentId];
+        }
+    }
+
+    S();
+    draw(); // re-renderiza para atualizar visual
+}
 function tE(id){xp[id]=!xp[id];draw()}
 function tP(n){oP[n]=oP[n]===false;S();draw()}
 function tW(k){oW[k]=oW[k]===false;S();draw()}
