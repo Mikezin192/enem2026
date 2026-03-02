@@ -274,6 +274,21 @@ imation: alertaPiscar 3s infinite;
 .sub-tk .ck {
     margin-right: 12px;
 }
+.sub-tarefas {
+    background: rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 8px;
+    margin: 8px 0;
+}
+.sub-tk {
+    border: 1px dashed var(--ac);
+    background: var(--bg3);
+    padding: 6px 10px;
+    margin: 4px 0;
+}
+.sub-tk .ck {
+    margin-right: 12px;
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -779,15 +794,14 @@ Object.keys(g[fn]).sort((a,b)=>a-b).forEach(w=>{const wt=g[fn][w],wd=wt.filter(t
 h+=`<article class="wk ${wo?'':'cl'}"><div class="wk-h" role="button" tabindex="0" onclick="tW('${wk}')" aria-expanded="${wo}"><div class="wk-d ${wc?'cpl':''}" style="background:${f.c}"></div><span class="wk-t">Semana ${w}</span><span class="wk-bg">${d1}→${d2}</span><span class="wk-bg ${wc?'wd':''}">${wd}/${wt.length}✓</span><span class="wk-ar">▼</span></div><div class="wk-b" style="max-height:${wo?'999999px':'0'};opacity:${wo?1:0}">`;
 wt.forEach(t => {
     const d2 = dn[t.id];
-    const ex = xp[t.id]; // expandido ou não
+    const ex = xp[t.id];
     const hn = nt[t.id];
     const isSm = t.mat.includes('Sim') || t.tipo === 'Simulado';
 
-    // Classe 'exp' controla se está expandido
     const expandedClass = ex ? 'exp' : '';
 
     h += `<article class="tk p-${t.pri} ${d2 ? 'done' : ''} ${expandedClass} ${t.multi ? 'multi' : ''} ${isSm ? 'sim' : ''} ${t.rest ? 'rest' : ''}" data-id="${t.id}" onclick="tE('${t.id}')">
-        
+        <!-- Sem checkbox no título principal -->
         <div class="tk-c">
             <h4>${t.tit}</h4>
             ${t.det ? `<p>${t.det}</p>` : ''}
@@ -803,7 +817,7 @@ wt.forEach(t => {
         </div>
     </article>`;
 
-    // Se expandido e tem múltiplas matérias, adiciona as sub-tarefas ABAIXO
+    // Expansão para múltiplas matérias
     if (ex && t.mat.length > 1) {
         h += `<div class="sub-tarefas" style="padding-left:40px; margin-top:8px; border-left:2px solid var(--ac); padding-bottom:8px;">`;
         t.mat.forEach((mat, idx) => {
@@ -825,8 +839,34 @@ wt.forEach(t => {
         });
         h += `</div>`;
     }
-});
-h+=`</div></article>`});h+=`</div></section>`});
+
+    // Expansão para dias de descanso (Sáb e Dom separados)
+    if (ex && t.rest) {
+        h += `<div class="sub-tarefas" style="padding-left:40px; margin-top:8px; border-left:2px solid var(--g); padding-bottom:8px;">`;
+        
+        // Sábado
+        const subIdSab = `${t.id}-Sab`;
+        const subFeitoSab = dn[subIdSab] || d2;
+        h += `<article class="tk sub-tk p-baixa ${subFeitoSab ? 'done' : ''}" style="margin:4px 0; background:rgba(34,197,94,0.08);">
+            <button type="button" class="ck ${subFeitoSab ? 'on' : ''}" onclick="event.stopPropagation(); ckSub('${subIdSab}', '${t.id}')"></button>
+            <div class="tk-c" style="font-size:0.9rem;">
+                <h4 style="color:var(--g);">Sábado: ${t.tit}</h4>
+            </div>
+        </article>`;
+
+        // Domingo
+        const subIdDom = `${t.id}-Dom`;
+        const subFeitoDom = dn[subIdDom] || d2;
+        h += `<article class="tk sub-tk p-baixa ${subFeitoDom ? 'done' : ''}" style="margin:4px 0; background:rgba(34,197,94,0.08);">
+            <button type="button" class="ck ${subFeitoDom ? 'on' : ''}" onclick="event.stopPropagation(); ckSub('${subIdDom}', '${t.id}')"></button>
+            <div class="tk-c" style="font-size:0.9rem;">
+                <h4 style="color:var(--g);">Domingo: ${t.tit}</h4>
+            </div>
+        </article>`;
+
+        h += `</div>`;
+    }
+});h+=`</div></article>`});h+=`</div></section>`});
 c.innerHTML=h||'<div class="empty">🔍 Nada encontrado</div>';upD()
 renderMapaFases();
 checkAtraso();
@@ -858,6 +898,35 @@ function ck(id) {
             confetti();
         }
     }
+    S();
+    draw();
+}
+function ckSub(subId, parentId) {
+    event.stopPropagation();
+
+    if (dn[subId]) {
+        delete dn[subId];
+        toast('⬜ Sub-tarefa desmarcada');
+    } else {
+        dn[subId] = Date.now();
+        toast('✅ Sub-tarefa concluída!');
+        beep(660, .1);
+    }
+
+    // Atualiza status da tarefa pai (se todas sub estiverem feitas)
+    const parentTask = T.find(t => t.id === parentId);
+    if (parentTask && (parentTask.mat.length > 1 || parentTask.rest)) {
+        const todasFeitas = (parentTask.mat.length > 1 
+            ? parentTask.mat.every(mat => dn[`${parentId}-${mat}`])
+            : dn[`${parentId}-Sab`] && dn[`${parentId}-Dom`]);
+
+        if (todasFeitas) {
+            dn[parentId] = Date.now();
+        } else {
+            delete dn[parentId];
+        }
+    }
+
     S();
     draw();
 }
