@@ -446,9 +446,15 @@ imation: alertaPiscar 3s infinite;
 
  <!-- ===== DIALOG ===== -->
 <dialog id="dlg">
-    <h3>📝 Anotações</h3>
+    <h3>📝 Anotações + Fonte do Conteúdo</h3>
     <div class="msub" data-dl="t"></div>
     <textarea id="nt" placeholder="Erros, dúvidas..."></textarea>
+
+    <!-- Novo campo para link do vídeo/site -->
+    <label style="display:block; margin:12px 0 4px; font-size:0.9rem; color:var(--t2);">Link do vídeo/site usado:</label>
+    <input type="url" id="fonteLink" placeholder="https://youtube.com/watch?v=... ou site" 
+           style="width:100%; padding:8px; background:var(--bg); border:1px solid var(--bd); border-radius:6px; color:var(--t); font-family:inherit;">
+
     <div id="redExtra" style="display:none; margin-top:12px;">
         <label>Nota da redação (0-1000):</label>
         <input type="number" id="redNota" min="0" max="1000" style="width:80px;">
@@ -802,10 +808,13 @@ wt.forEach(t => {
 
     h += `<article class="tk p-${t.pri} ${d2 ? 'done' : ''} ${expandedClass} ${t.multi ? 'multi' : ''} ${isSm ? 'sim' : ''} ${t.rest ? 'rest' : ''}" data-id="${t.id}" onclick="tE('${t.id}')">
         <!-- Sem checkbox no título principal -->
-        <div class="tk-c">
-            <h4>${t.tit}</h4>
-            ${t.det ? `<p>${t.det}</p>` : ''}
-            <div class="tk-tags">
+       <div class="tk-c">
+    <h4>${t.tit}</h4>
+    ${nt[t.id] && nt[t.id].fonte ? 
+        `<p style="margin-top:4px; font-size:0.75rem;"><a href="${nt[t.id].fonte}" target="_blank" style="color:var(--ac2); text-decoration:underline;">📹 Fonte usada</a></p>` 
+        : ''}
+    ${t.det ? `<p>${t.det}</p>` : ''}
+    <div class="tk-tags">
                 ${t.mat.map(m => `<span class="tg tg-${m}">${matIcons[m] || '📌'} ${m}</span>`).join('')}
                 <span class="tg" style="background:rgba(124,92,252,.05);color:var(--ac2)">${t.tipo}</span>
             </div>
@@ -998,20 +1007,21 @@ function checkAtraso() {
 
 function oM(id){
     mI = id;
-    const task = T.find(t => t.id === id);          
+    const task = T.find(t => t.id === id);
     $('[data-dl="t"]').textContent = task.tit;
     document.getElementById('nt').value = nt[id] ? (typeof nt[id] === 'object' ? nt[id].text || '' : nt[id]) : '';
-
     
+    // Novo: carrega o link salvo (se existir)
+    const fonte = nt[id] && typeof nt[id] === 'object' ? nt[id].fonte || '' : '';
+    document.getElementById('fonteLink').value = fonte;
+
     if (task && (task.mat.includes('Red') || task.tipo.includes('Red'))) {
         $('#redExtra').style.display = 'block';
-
-                if (nt[id] && typeof nt[id] === 'object') {
+        if (nt[id] && typeof nt[id] === 'object') {
             $('#redNota').value = nt[id].nota || '';
-           if (nt[id] && nt[id].img) {
-    $('#imgPreview').innerHTML = `<img src="${nt[id].img}" style="max-width:100%; border-radius:8px;">`;
-    $('#redNota').value = nt[id].nota || '';
-}
+            if (nt[id].img) {
+                $('#imgPreview').innerHTML = `<img src="${nt[id].img}" style="max-width:100%; border-radius:8px;">`;
+            }
         } else {
             $('#redNota').value = '';
             $('#imgPreview').innerHTML = '';
@@ -1021,58 +1031,48 @@ function oM(id){
         $('#redNota').value = '';
         $('#imgPreview').innerHTML = '';
     }
-
     document.getElementById('dlg').showModal();
 }
 function cDlg(){document.getElementById('dlg').close();mI=null}
 function sN(){
     const textareaValue = document.getElementById('nt').value.trim();
+    const fonteLink = document.getElementById('fonteLink').value.trim();
+
+    let savedData = { text: textareaValue };
+
+    // Salva o link se houver
+    if (fonteLink) {
+        savedData.fonte = fonteLink;
+    }
 
     if ($('#redExtra').style.display !== 'none') {
-        // É redação → salva como objeto
+        // É redação
         const nota = $('#redNota').value.trim();
         const fileInput = $('#redImg');
-
         if (fileInput.files && fileInput.files[0]) {
-            // Tem nova foto → lê e salva tudo
             const reader = new FileReader();
             reader.onload = function(ev) {
-                nt[mI] = {
-                    text: textareaValue,
-                    nota: nota || '',
-                    img: ev.target.result
-                };
+                savedData.nota = nota || '';
+                savedData.img = ev.target.result;
+                nt[mI] = savedData;
                 S();
                 cDlg();
-                toast('Redação salva com foto e nota!');
+                toast('Redação + fonte salva!');
                 draw();
             };
             reader.readAsDataURL(fileInput.files[0]);
-            return; // Espera o onload terminar (async)
+            return;
         } else {
-            // Sem nova foto → mantém a anterior se existir
-            let existingImg = '';
-            if (nt[mI] && typeof nt[mI] === 'object' && nt[mI].img) {
-                existingImg = nt[mI].img;
-            }
-            nt[mI] = {
-                text: textareaValue,
-                nota: nota || '',
-                img: existingImg
-            };
-        }
-    } else {
-        // Não é redação → salva como string simples
-        if (textareaValue) {
-            nt[mI] = textareaValue;
-        } else {
-            delete nt[mI];
+            let existingImg = nt[mI] && typeof nt[mI] === 'object' ? nt[mI].img || '' : '';
+            savedData.nota = nota || '';
+            savedData.img = existingImg;
         }
     }
 
+    nt[mI] = savedData;
     S();
     cDlg();
-    toast('💾 Salvo!');
+    toast('💾 Anotações + fonte salva!');
     draw();
 }
 function eCSV(){let c='\uFEFF"Sem","Fase","Dia","Data","Mat","Título","Det","Tipo","Pri","Feito"\n';T.forEach(t=>{c+=`${t.sem},"${F[t.fase].n}","${t.dia}","${t.data}","${t.mat.join(',')}","${t.tit}","${t.det.replace(/"/g,'""')}","${t.tipo}","${t.pri}","${dn[t.id]?'TRUE':'FALSE'}"\n`});const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv;charset=utf-8;'}));a.download='enem2026_cc.csv';a.click();toast('📥 CSV!')}
