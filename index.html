@@ -451,9 +451,9 @@ imation: alertaPiscar 3s infinite;
     <textarea id="nt" placeholder="Erros, dúvidas..."></textarea>
 
     <!-- Novo campo para link do vídeo/site -->
-    <label style="display:block; margin:12px 0 4px; font-size:0.9rem; color:var(--t2);">Link do vídeo/site usado:</label>
-    <input type="url" id="fonteLink" placeholder="https://youtube.com/watch?v=... ou site" 
-           style="width:100%; padding:8px; background:var(--bg); border:1px solid var(--bd); border-radius:6px; color:var(--t); font-family:inherit;">
+ <label style="display:block; margin:12px 0 4px; font-size:0.9rem; color:var(--t2);">Fontes usadas (um link por linha):</label>
+<textarea id="fonteLinks" placeholder="Cole links aqui, um por linha&#10;Exemplo:&#10;https://youtube.com/watch?v=abc123&#10;https://khanacademy.org/math/...&#10;https://pdf.com/resumo.pdf" 
+          style="width:100%; height:80px; padding:8px; background:var(--bg); border:1px solid var(--bd); border-radius:6px; color:var(--t); font-family:inherit; resize:vertical;"></textarea>
 
     <div id="redExtra" style="display:none; margin-top:12px;">
         <label>Nota da redação (0-1000):</label>
@@ -808,17 +808,22 @@ wt.forEach(t => {
 
     h += `<article class="tk p-${t.pri} ${d2 ? 'done' : ''} ${expandedClass} ${t.multi ? 'multi' : ''} ${isSm ? 'sim' : ''} ${t.rest ? 'rest' : ''}" data-id="${t.id}" onclick="tE('${t.id}')">
         <!-- Sem checkbox no título principal -->
-       <div class="tk-c">
+     <div class="tk-c">
     <h4>${t.tit}</h4>
-    ${nt[t.id] && nt[t.id].fonte ? 
-        `<p style="margin-top:4px; font-size:0.75rem;"><a href="${nt[t.id].fonte}" target="_blank" style="color:var(--ac2); text-decoration:underline;">📹 Fonte usada</a></p>` 
+    ${nt[t.id] && nt[t.id].fontes && nt[t.id].fontes.length > 0 ? 
+        `<p style="margin-top:4px; font-size:0.75rem; line-height:1.4;">
+            Fontes usadas:<br>
+            ${nt[t.id].fontes.map(link => 
+                `<a href="${link}" target="_blank" style="color:var(--ac2); text-decoration:underline; display:block; margin-bottom:2px;">${link.substring(0,60)}${link.length > 60 ? '...' : ''}</a>`
+            ).join('')}
+         </p>` 
         : ''}
     ${t.det ? `<p>${t.det}</p>` : ''}
     <div class="tk-tags">
-                ${t.mat.map(m => `<span class="tg tg-${m}">${matIcons[m] || '📌'} ${m}</span>`).join('')}
-                <span class="tg" style="background:rgba(124,92,252,.05);color:var(--ac2)">${t.tipo}</span>
-            </div>
-        </div>
+        ${t.mat.map(m => `<span class="tg tg-${m}">${matIcons[m] || '📌'} ${m}</span>`).join('')}
+        <span class="tg" style="background:rgba(124,92,252,.05);color:var(--ac2)">${t.tipo}</span>
+    </div>
+</div>
         <div class="tk-m">
             <span class="dy">${t.dia}</span>
             <time datetime="${t.data}">${fmt(t.data)}</time>
@@ -1011,9 +1016,9 @@ function oM(id){
     $('[data-dl="t"]').textContent = task.tit;
     document.getElementById('nt').value = nt[id] ? (typeof nt[id] === 'object' ? nt[id].text || '' : nt[id]) : '';
     
-    // Novo: carrega o link salvo (se existir)
-    const fonte = nt[id] && typeof nt[id] === 'object' ? nt[id].fonte || '' : '';
-    document.getElementById('fonteLink').value = fonte;
+   // Carrega múltiplos links (separados por \n)
+const fontes = nt[id] && typeof nt[id] === 'object' && nt[id].fontes ? nt[id].fontes.join('\n') : '';
+document.getElementById('fonteLinks').value = fontes;
 
     if (task && (task.mat.includes('Red') || task.tipo.includes('Red'))) {
         $('#redExtra').style.display = 'block';
@@ -1036,43 +1041,59 @@ function oM(id){
 function cDlg(){document.getElementById('dlg').close();mI=null}
 function sN(){
     const textareaValue = document.getElementById('nt').value.trim();
-    const fonteLink = document.getElementById('fonteLink').value.trim();
+    const fontesText = document.getElementById('fonteLinks').value.trim();
+    
+    let fontesArray = [];
+    if (fontesText) {
+        fontesArray = fontesText.split('\n')
+            .map(link => link.trim())
+            .filter(link => link && (link.startsWith('http://') || link.startsWith('https://')));
+    }
 
     let savedData = { text: textareaValue };
 
-    // Salva o link se houver
-    if (fonteLink) {
-        savedData.fonte = fonteLink;
+    // Adiciona as fontes ao objeto (sempre, mesmo se vazio)
+    if (fontesArray.length > 0) {
+        savedData.fontes = fontesArray;
     }
 
     if ($('#redExtra').style.display !== 'none') {
-        // É redação
+        // É redação → trata foto e nota
         const nota = $('#redNota').value.trim();
         const fileInput = $('#redImg');
+
         if (fileInput.files && fileInput.files[0]) {
+            // Tem nova foto → lê como base64 (async)
             const reader = new FileReader();
             reader.onload = function(ev) {
                 savedData.nota = nota || '';
                 savedData.img = ev.target.result;
+                // Garante que fontes sejam salvas também na redação
+                if (fontesArray.length > 0) savedData.fontes = fontesArray;
                 nt[mI] = savedData;
                 S();
                 cDlg();
-                toast('Redação + fonte salva!');
+                toast('Redação + fontes salvas!');
                 draw();
             };
             reader.readAsDataURL(fileInput.files[0]);
-            return;
+            return; // Espera o onload terminar
         } else {
-            let existingImg = nt[mI] && typeof nt[mI] === 'object' ? nt[mI].img || '' : '';
+            // Sem nova foto → mantém a anterior se existir
+            let existingImg = '';
+            if (nt[mI] && typeof nt[mI] === 'object' && nt[mI].img) {
+                existingImg = nt[mI].img;
+            }
             savedData.nota = nota || '';
             savedData.img = existingImg;
         }
     }
 
+    // Salva tudo (incluindo fontes) para tarefas normais ou redação sem nova foto
     nt[mI] = savedData;
     S();
     cDlg();
-    toast('💾 Anotações + fonte salva!');
+    toast(fontesArray.length > 0 ? '💾 Anotações + fontes salvas!' : '💾 Anotações salvas!');
     draw();
 }
 function eCSV(){let c='\uFEFF"Sem","Fase","Dia","Data","Mat","Título","Det","Tipo","Pri","Feito"\n';T.forEach(t=>{c+=`${t.sem},"${F[t.fase].n}","${t.dia}","${t.data}","${t.mat.join(',')}","${t.tit}","${t.det.replace(/"/g,'""')}","${t.tipo}","${t.pri}","${dn[t.id]?'TRUE':'FALSE'}"\n`});const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:'text/csv;charset=utf-8;'}));a.download='enem2026_cc.csv';a.click();toast('📥 CSV!')}
